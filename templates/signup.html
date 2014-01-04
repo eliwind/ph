@@ -1,0 +1,15 @@
+<!doctype html>
+<title>Signup</title>
+
+
+{% if success %}
+<h1>Success!</h1>
+
+OK, {{ name }}, you're signed up for {{ shift }} on {{ date }}.  Confirmation email will go to {{ email }}.
+
+{% else %}
+<h1>There's a problem</h1>
+
+Hm, {{ name }}, something went wrong.  There doesn't seem to be a(n) {{ shift }}
+shift available on {{ date }}.  You should talk to the Parent Help Coordinator.
+{% endif %}

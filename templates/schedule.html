@@ -1,0 +1,29 @@
+<!doctype html>
+<title>Schedule</title>
+
+
+<h1>Schedule for {{ start }} to {{ end }}</h1>
+
+<table>
+  <tr>
+	<th>Shift</th>
+	<th>Date</th>
+	<th>Name</th>
+	<th>Email</th>
+  </tr>
+	
+{% for slot in results %}
+  <tr>
+	<td>{{ slot['shift'] }}</td>
+	<td>{{ slot['date'] }}</td>
+{% if slot['worker'] is defined %}
+	<td>{{ json.loads(slot['worker'])['name'] }}</td>
+	<td>{{ json.loads(slot['worker'])['email'] }}</td>
+{% else %}
+	<td>N/A</td>
+	<td>N/A</td>
+{% endif %}
+
+  </tr>
+{% endfor %}
+</table>
