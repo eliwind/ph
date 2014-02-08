@@ -1,6 +1,24 @@
 <html>
+<head>
+<link rel='stylesheet' type='text/css' href='fullcalendar.css' />
+<script type='text/javascript' src='jquery-1.11.0.js' ></script>
+<script type='text/javascript' src='fullcalendar.js'> </script>
+<script>
+$(document).ready(function() {
+
+    // page is now ready, initialize the calendar...
+
+    $('#calendar').fullCalendar({
+        weekends: false,
+        events: '/schedule'
+    })
+
+});
+</script>
+
+</head>
+
 <body>
-<h3>Hello</h3>
-World!
+<div id='calendar'/>
 </body>
 </html>
