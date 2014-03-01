@@ -1,6 +1,7 @@
 <html>
 <head>
 <link rel='stylesheet' type='text/css' href='fullcalendar.css' />
+<link rel='stylesheet' type='text/css' href='ph.css' />
 <script type='text/javascript' src='jquery-1.11.0.js' ></script>
 <script type='text/javascript' src='fullcalendar.js'> </script>
 <script>
@@ -10,15 +11,135 @@ $(document).ready(function() {
 
     $('#calendar').fullCalendar({
         weekends: false,
-        events: '/schedule'
-    })
+        events: '/schedule',
+        contentHeight: 600,
+
+        // handle event clicks: pop up edit box
+        eventClick: function(calEvent, jsEvent, view) {
+
+            // set up shift variables for the popup
+            if (calEvent.worker) {
+                $('#shiftTitle').text("Change Shift Assignment");
+                $('#shiftWorker').val(calEvent.worker.name);
+                $('#shiftEmail').val(calEvent.worker.email);
+                $('#cancelShift').show();
+            } else {
+                $('#shiftTitle').text("Parent Help Signup");
+                $('#shiftWorker').val("");
+                $('#shiftEmail').val("");
+                $('#cancelShift').hide();
+
+            }
+            $('#shiftDate').val(calEvent.start.toLocaleDateString());
+            $('#shift').val(calEvent.shift);
+
+            // Display the popup
+            $('#overlay, #popup').animate({'opacity':'0.7'}, 300, 'linear');
+            $('#popup').animate({'opacity':'1.00'},300,'linear');
+            $('#overlay, #popup').css('display','block');
+            $('#popup').css({'left':(($(window).width()/2)-($('#popup').width()/2))});
+            $('#popup').css({'top':(($(window).height()/2)-($('#popup').height()/2)-50)});
+
+            // stash the calendar even that was clicked
+            $('#popup').data('event', calEvent);
+        }
+
+    });
+
+    // Close popup
+    $('#closePopup').click(closePopup);
+
+    // Save a shift
+    $('#saveShift').click(function(){
+        var event = $('#popup').data('event');
+        signup (event.start, event.shift, $('#shiftWorker').val(), $('#shiftEmail').val());
+    });
+
+    // Cancel a shift
+    $('#cancelShift').click(function(){
+        var event = $('#popup').data('event');
+        if (confirm ("Really, really cancel " + $('#shiftWorker').val() + "'s shift?  There's not an easy way to undo this.")) {
+            cancel (event.start, event.shift);
+        }
+    });
+
 
 });
+
+function closePopup() {
+       $('#overlay, #popup').animate({'opacity':'0'},300,'linear', function(){
+           $('#overlay, #popup').css('display','none');
+       });
+}
+
+function signup (date, shift, name, email) {
+        $.ajax({
+                    url: '/signup',
+                    dataType: 'json',
+                    data: {
+                        date: date.toISOString().slice(0,10).replace(/-/g,""),
+                        shift: shift,
+                        name: name,
+                        email: email
+                    },
+                    success: function(result, status, xhr) {
+                        $('#calendar').fullCalendar('refetchEvents');
+                        closePopup();
+
+                    },
+                    error: function(xhr, status, error) {
+                        alert ('Error signing up.  Try again?');
+                    }
+
+                });
+}
+
+function cancel (date, shift) {
+        $.ajax({
+                    url: '/cancel',
+                    dataType: 'json',
+                    data: {
+                        date: date.toISOString().slice(0,10).replace(/-/g,""),
+                        shift: shift
+                    },
+                    success: function(result, status, xhr) {
+                        $('#calendar').fullCalendar('refetchEvents');
+                        closePopup();
+
+                    },
+                    error: function(xhr, status, error) {
+                        alert ('Error canceling shift.  Try again?');
+                    }
+
+                });
+}
+
 </script>
 
 </head>
 
 <body>
-<div id='calendar'/>
+<div id='calendar'></div>
+
+<!-- overlay to dim the background when a popup opens-->
+<div id='overlay'></div>
+
+<!-- Popup for editing shifts -->
+<div id='popup'>
+  <b><span id='shiftTitle'></span></b><p>
+  <form id='editShift'>
+    <label><span>Shift: </span><input type="text" readOnly="true" id="shift"/></label>
+    <label><span>Date: </span><input type="text" readOnly="true" id="shiftDate"/></span></label>
+    <p>
+    <label><span>Name: </span><input type="text" id="shiftWorker" /></label>
+    <label><span>Email: </span><input type="text" id="shiftEmail" /></label>
+    <p>
+    <div style="float:right;">
+        <input type="button" id="cancelShift" value="Cancel shift"/>
+        <input type="button" id="saveShift" value="Save shift"/>
+        <input type="button" id="closePopup" value="Discard changes"/>
+    </div>
+  </form>
+</div>
 </body>
 </html>

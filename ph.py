@@ -9,6 +9,29 @@ import json
 app = Flask(__name__)
 
 
+@app.route('/cancel')
+def cancel():
+    r = redis.StrictRedis()
+
+    shift = request.args.get('shift')
+    date = request.args.get('date')
+    # TODO: make sure all arguments are provided
+
+    # Make sure the shift exists
+    slots=r.zrangebyscore ('slotsbydate', date, date)
+    pipe = r.pipeline()
+    for slot in slots:
+        pipe.hgetall(slot)
+    shifts = filter (lambda x: x['shift'] == shift,
+                     pipe.execute())
+    if len(shifts) >= 1:
+        print ("++++ deleting shift: " + shifts[0]['date'] + '|' + shifts[0]['shift']);
+        r.hdel (shifts[0]['date'] + '|' + shifts[0]['shift'], 'worker')
+        return json.dumps('success');
+
+    elif len(shifts) == 0:
+        return json.dumps('shift not available');
+
 @app.route('/signup')
 def signup():
     r = redis.StrictRedis()
@@ -29,12 +52,12 @@ def signup():
     if len(shifts) >= 1:
         r.hset (shifts[0]['date'] + '|' + shifts[0]['shift'],
                 'worker', json.dumps({'name':name, 'email':email}))
-        return render_template ('signup.html', success=True, name=name, email=email, shift=shift, date=date)
+        return json.dumps('success');
 
     elif len(shifts) == 0:
-        return render_template ('signup.html', success=False, err='Shift not available', name=name, email=email, shift=shift, date=date)
+        return json.dumps('shift not available');
 
-    
+
 
 @app.route('/schedule')
 def schedule():
@@ -64,8 +87,10 @@ def toScore (date):
 
 def toCalEvent (slot):
     '''Turns a slot as stored in redis into the right JSON format for rendering in FullCalendar'''
+    worker = None
     if ('worker' in slot):
-        title = slot['shift'] + ': ' + json.loads(slot['worker'])['name']
+        worker = json.loads(slot['worker'])
+        title = slot['shift'] + ': ' + worker['name']
         color='#00b4cc'
         textColor='black'
     else:
@@ -78,7 +103,11 @@ def toCalEvent (slot):
         'start': slot['date'] + 'T' + getStartTime(slot['shift']) + 'Z',
         'end': slot['date'] + 'T' + getEndTime(slot['shift']) + 'Z',
         'color': color,
-        'textColor': textColor
+        'textColor': textColor,
+
+        # extra fields to pass through for editing shifts
+        'worker':worker,
+        'shift':slot['shift']
         }
 
 def getStartTime (shift):
