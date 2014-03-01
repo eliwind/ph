@@ -1,0 +1,55 @@
+
+#overlay {
+    opacity: 0;
+    background-color: #fff;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    z-index: 50;
+    width: 100%;
+    height: 100%;
+    display:none;
+}
+ 
+#popup {
+    margin:auto;
+    padding:20px;
+    width:400px;
+    background:#fff;
+    box-shadow: 0 4px 16px #999;
+    z-index: 51;
+    border:1px solid #acacac;
+    position:absolute;
+    display:none;
+}
+
+/* the label needs a height */
+label {
+    display:block;
+    position:relative;
+}
+
+/* the first span is the real "label" */
+label span:first-child  {
+    font-weight:bold;
+    position:absolute;
+    left: 3px;
+}
+
+
+/* the "content" has a margin-left - position static is for the spans*/
+label input, label textarea, label select, label span.field, label span.value {
+    margin-left: 60px;
+    display:inline;
+    position: static;
+}
+
+/* simple class for having the input left and the text right (i.e. radioboxes) */
+label.simple span{
+    font-weight:default;
+    position:static;
+}
+
+label.simple input {
+    margin-left:auto;
+}
