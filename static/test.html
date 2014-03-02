@@ -22,37 +22,46 @@ $(document).ready(function() {
                 $('#shiftTitle').text("Change Shift Assignment");
                 $('#shiftWorker').val(calEvent.worker.name);
                 $('#shiftEmail').val(calEvent.worker.email);
+                $('#shiftFamily').val(calEvent.worker.family);
                 $('#cancelShift').show();
             } else {
                 $('#shiftTitle').text("Parent Help Signup");
                 $('#shiftWorker').val("");
                 $('#shiftEmail').val("");
+                $('#shiftFamily').val("");
                 $('#cancelShift').hide();
 
             }
             $('#shiftDate').val(calEvent.start.toLocaleDateString());
             $('#shift').val(calEvent.shift);
+            $('#errMsg').hide();
 
-            // Display the popup
-            $('#overlay, #popup').animate({'opacity':'0.7'}, 300, 'linear');
-            $('#popup').animate({'opacity':'1.00'},300,'linear');
-            $('#overlay, #popup').css('display','block');
-            $('#popup').css({'left':(($(window).width()/2)-($('#popup').width()/2))});
-            $('#popup').css({'top':(($(window).height()/2)-($('#popup').height()/2)-50)});
+            displayPopup ('#popup')
 
             // stash the calendar even that was clicked
             $('#popup').data('event', calEvent);
         }
-
     });
 
+    // Handle 'find shifts' link
+    $('#findLink').click(function() {
+
+        $('#shiftDiv').hide();
+        $('#findFamily').val('');
+        displayPopup ('#find');
+        return false;
+    });
+
+
     // Close popup
-    $('#closePopup').click(closePopup);
+    $('#closePopup').click(function() {closePopup('#popup')});
+
+    // Close popup
+    $('#closeFind').click(function() {closePopup('#find')});
 
     // Save a shift
     $('#saveShift').click(function(){
-        var event = $('#popup').data('event');
-        signup (event.start, event.shift, $('#shiftWorker').val(), $('#shiftEmail').val());
+        signup ($('#popup').data('event'));
     });
 
     // Cancel a shift
@@ -63,16 +72,51 @@ $(document).ready(function() {
         }
     });
 
+    // Find shifts
+    $('#findShift').click(function(){
+        $.ajax({
+                    url: '/shifts',
+                    dataType: 'json',
+                    data: {
+                        family: $('#findFamily').val()
+                    },
+                    success: showShifts,
+                    error: function(xhr, status, error) {
+                        alert ('Error.  Try again in a minute or two');
+                    }
+
+                });
+    });
 
 });
 
-function closePopup() {
-       $('#overlay, #popup').animate({'opacity':'0'},300,'linear', function(){
-           $('#overlay, #popup').css('display','none');
+function displayPopup(dlg) {
+        $('#overlay, ' + dlg).animate({'opacity':'0.7'}, 300, 'linear');
+        $(dlg).animate({'opacity':'1.00'},300,'linear');
+        $('#overlay, ' + dlg).css('display','block');
+        $(dlg).css({'left':(($(window).width()/2)-($(dlg).width()/2))});
+        $(dlg).css({'top':(($(window).height()/2)-($(dlg).height()/2)-50)});
+}
+   
+
+function closePopup(dlg) {
+       $('#overlay, ' + dlg).animate({'opacity':'0'},300,'linear', function(){
+           $('#overlay, ' + dlg).css('display','none');
        });
 }
 
-function signup (date, shift, name, email) {
+function signup (event) {
+        var date = event.start;
+        var shift = event.shift;
+        var name = $('#shiftWorker').val();
+        var email = $('#shiftEmail').val();
+        var family = $('#shiftFamily').val();
+
+        if (!name || !email || !family) {
+            $('#errMsg').text('Fill out form completely. All fields are required.');
+            $('#errMsg').show();
+            return;
+        }
         $.ajax({
                     url: '/signup',
                     dataType: 'json',
@@ -80,15 +124,16 @@ function signup (date, shift, name, email) {
                         date: date.toISOString().slice(0,10).replace(/-/g,""),
                         shift: shift,
                         name: name,
-                        email: email
+                        email: email,
+                        family: family
                     },
                     success: function(result, status, xhr) {
                         $('#calendar').fullCalendar('refetchEvents');
-                        closePopup();
+                        closePopup('#popup');
 
                     },
                     error: function(xhr, status, error) {
-                        alert ('Error signing up.  Try again?');
+                        alert ('Error signing up.  Try again in a minute or two.');
                     }
 
                 });
@@ -104,14 +149,44 @@ function cancel (date, shift) {
                     },
                     success: function(result, status, xhr) {
                         $('#calendar').fullCalendar('refetchEvents');
-                        closePopup();
+                        closePopup('#popup');
 
                     },
                     error: function(xhr, status, error) {
-                        alert ('Error canceling shift.  Try again?');
+                        alert ('Error canceling shift.  Try again in a minute or two.');
                     }
 
                 });
+}
+
+function showShifts (result, status, xhr) {
+    // clear out table
+    $('#shiftData').empty();
+
+    // sort shifts by date, then by shift name
+    var shiftComparator = function (a, b) {
+        var result = a['date'].localeCompare(b['date']);
+        if (result == 0) {
+            result = a['shift'].localeCompare(b['shift']);
+        }
+        return result;
+    }
+
+    if (result.length > 0) {
+        // add shifts to the table
+        result.sort (shiftComparator).forEach (function (shift) {
+                      shiftDate = new Date(shift['date']);
+                      $('#shiftData').append('<tr><td>' + shiftDate.getUTCMonth() + '/' + shiftDate.getUTCDate() + '/' + shiftDate.getUTCFullYear() +
+    							  '</td><td>' + shift['worker']['name'] +
+    						        '</td><td>' + shift['shift'] + '</td></tr>');                            
+                  });
+        $('#shiftTable').show();
+        $('#noneFound').hide();
+    } else {
+        $('#shiftTable').hide();
+        $('#noneFound').show();
+    }
+    $('#shiftDiv').show();
 }
 
 </script>
@@ -119,21 +194,28 @@ function cancel (date, shift) {
 </head>
 
 <body>
+<div id=header'>
+<a id='findLink' href='#'>Find my shifts</a> | <a href="#">Set up</a> <p>
+</div>
+
 <div id='calendar'></div>
+
 
 <!-- overlay to dim the background when a popup opens-->
 <div id='overlay'></div>
 
 <!-- Popup for editing shifts -->
-<div id='popup'>
+<div id='popup' class='popup'>
   <b><span id='shiftTitle'></span></b><p>
   <form id='editShift'>
-    <label><span>Shift: </span><input type="text" readOnly="true" id="shift"/></label>
-    <label><span>Date: </span><input type="text" readOnly="true" id="shiftDate"/></span></label>
+    <label><span>Shift </span><input type="text" readOnly="true" id="shift"/></label>
+    <label><span>Date </span><input type="text" readOnly="true" id="shiftDate"/></span></label>
     <p>
-    <label><span>Name: </span><input type="text" id="shiftWorker" /></label>
-    <label><span>Email: </span><input type="text" id="shiftEmail" /></label>
+    <label><span>Family Name </span><input type="text" id="shiftFamily" autofocus="true"/></label>
+    <label><span>Who's working? </span><input type="text" id="shiftWorker" /></label>
+    <label><span>Email </span><input type="text" id="shiftEmail" /></label>
     <p>
+    <span id='errMsg'></span>							
     <div style="float:right;">
         <input type="button" id="cancelShift" value="Cancel shift"/>
         <input type="button" id="saveShift" value="Save shift"/>
@@ -141,5 +223,40 @@ function cancel (date, shift) {
     </div>
   </form>
 </div>
+
+
+<!-- Find my shift -->
+<div id='find' class='popup'>
+  <b>Find My Shifts</b><p>
+  <form id='findShifts'>
+    <b>Family Name</b> <input type="text" id="findFamily" autofocus="true"/> <input type="button" id="findShift" value="Find shifts"/>
+
+    <div id="shiftDiv">
+    <p>
+    <b> You're signed up for the following shifts:</b>
+    <p>
+    <span id='noneFound'><i>None found.  Did you spell your family name the exact same way as when you signed up?</i></span>
+    <table id="shiftTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Who's working?</th>
+                <th>Shift</th>
+            </tr>
+        </thead>
+        <tbody id="shiftData">
+        </tbody>
+    </table>
+    </div>
+
+    <div style="float:right;">
+        <input type="button" id="closeFind" value="Close"/>
+    </div>
+  </form>
+
+
+
+</div>
+
 </body>
 </html>

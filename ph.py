@@ -6,8 +6,22 @@ from flask import request
 import redis
 import json
 
+from ses_email import sendmail
+
 app = Flask(__name__)
 
+@app.route('/shifts')
+def shifts():
+    r = redis.StrictRedis()
+
+    family = request.args.get('family')
+    slots = r.lrange (family, 0, -1)
+    pipe = r.pipeline()
+    for slot in slots:
+        pipe.hgetall(slot)
+
+    return json.dumps([fixWorker(s) for s in pipe.execute()])
+    
 
 @app.route('/cancel')
 def cancel():
@@ -18,19 +32,17 @@ def cancel():
     # TODO: make sure all arguments are provided
 
     # Make sure the shift exists
-    slots=r.zrangebyscore ('slotsbydate', date, date)
-    pipe = r.pipeline()
-    for slot in slots:
-        pipe.hgetall(slot)
-    shifts = filter (lambda x: x['shift'] == shift,
-                     pipe.execute())
-    if len(shifts) >= 1:
-        print ("++++ deleting shift: " + shifts[0]['date'] + '|' + shifts[0]['shift']);
-        r.hdel (shifts[0]['date'] + '|' + shifts[0]['shift'], 'worker')
-        return json.dumps('success');
+    slots=getSlots (r, date, shift)
+    if len(shifts) == 0:
+        return json.dumps('shift not available')
+    
+    shiftname = shifts[0]['date'] + '|' + shifts[0]['shift']
+    worker = json.loads(r.hget(shiftname, 'worker'))
+    r.hdel (shiftname, 'worker')
+    r.lrem (worker['family'], 0, shiftname)
+    sendCancelEmail (worker['email'], worker['name'], shifts[0]['date'], shifts[0]['shift'])
+    return json.dumps('success')
 
-    elif len(shifts) == 0:
-        return json.dumps('shift not available');
 
 @app.route('/signup')
 def signup():
@@ -40,23 +52,29 @@ def signup():
     date = request.args.get('date')
     name = request.args.get('name')
     email = request.args.get('email')
+    family = request.args.get('family')
+    
     # TODO: make sure all arguments are provided
 
     # Make sure the shift exists
-    slots=r.zrangebyscore ('slotsbydate', date, date)
-    pipe = r.pipeline()
-    for slot in slots:
-        pipe.hgetall(slot)
-    shifts = filter (lambda x: x['shift'] == shift,
-                     pipe.execute())
-    if len(shifts) >= 1:
-        r.hset (shifts[0]['date'] + '|' + shifts[0]['shift'],
-                'worker', json.dumps({'name':name, 'email':email}))
-        return json.dumps('success');
+    shifts = getSlots (r, date, shift)
+    if len(shifts) == 0:
+        return json.dumps('shift not available')
 
-    elif len(shifts) == 0:
-        return json.dumps('shift not available');
-
+    shiftname = shifts[0]['date'] + '|' + shifts[0]['shift']
+    oldworker = r.hget(shiftname, 'worker')
+    if (oldworker):
+        oldworker = json.loads(oldworker)
+        r.lrem (oldworker['family'], 0, shiftname)
+        
+    r.hset (shiftname, 'worker',
+            json.dumps({'name':name, 'email':email, 'family':family}))
+    r.lpush (family, shiftname)
+    sendSignupEmail (email, name, shifts[0]['date'], shift)
+    if (oldworker and oldworker['email'] != email):
+        sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift)
+            
+    return json.dumps('success')
 
 
 @app.route('/schedule')
@@ -70,16 +88,23 @@ def schedule():
     
     # For each date, we want to find all the shifts, then look up each of them
     slots = r.zrangebyscore ('slotsbydate', toScore(startDate), toScore(endDate))
-
     pipe = r.pipeline()
     for slot in slots:
         pipe.hgetall(slot)
 
-    calevents = [toCalEvent(e) for e in pipe.execute()]
-    return json.dumps(calevents)
+    return json.dumps([toCalEvent(e) for e in pipe.execute()])
 
 
 ##############################################################
+def getSlots (r, date, shift):
+    '''Gets the slot, if any, for a given date (as YYYYMMDD integer) and shift'''
+    slots=r.zrangebyscore ('slotsbydate', date, date)
+    pipe = r.pipeline()
+    for slot in slots:
+        pipe.hgetall(slot)
+    return [x for x in pipe.execute() if x['shift'] == shift]
+    
+    
 
 def toScore (date):
     '''Converts a date to an integer to use as a score in a redis sorted set: YYYYMMDD'''
@@ -127,7 +152,50 @@ def getEndTime (shift):
         'PM':'14:20:00',
         'Snack':'09:00:00'
         }[shift]
+
+def fixWorker (shift):
+    ''' Replaces 'worker' field as json string with an object'''
+    if ('worker' in shift):
+        shift['worker'] = json.loads(shift['worker'])
+    return shift
+
+def sendSignupEmail (email, name, date, shift):
+    body = '''\
+Hello!
+
+This e-mail confirms that you've signed up for parent help or snack at Agassiz Preschool:
+
+Shift: %s
+Date: %s
+
+If you have any questions, please e-mail Eli Daniel at eli.daniel@gmail.com or call him at (857) 222-6705.
+
+Thanks!
+
+Your friends at Agassiz Preschool
+''' % (shift, date)
+
+    sendmail (email, 'Your Parent Help or Snack confirmation', body)
     
+    
+def sendCancelEmail (email, name, date, shift):
+    body = '''\
+Hello!
+
+This e-mail confirms that your Agassiz Preschool parent help shift has been canceled:
+
+Shift: %s
+Date: %s
+
+If you have any questions, please e-mail Eli Daniel at eli.daniel@gmail.com or call him at (857) 222-6705.
+
+Thanks!
+
+Your friends at Agassiz Preschool
+''' % (shift, date)
+
+    sendmail (email, 'Your Parent Help shift has been canceled', body)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')

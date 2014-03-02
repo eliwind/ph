@@ -11,7 +11,7 @@
     display:none;
 }
  
-#popup {
+.popup {
     margin:auto;
     padding:20px;
     width:400px;
@@ -21,6 +21,10 @@
     border:1px solid #acacac;
     position:absolute;
     display:none;
+}
+
+#errMsg {
+    color: red;
 }
 
 /* the label needs a height */
@@ -39,7 +43,7 @@ label span:first-child  {
 
 /* the "content" has a margin-left - position static is for the spans*/
 label input, label textarea, label select, label span.field, label span.value {
-    margin-left: 60px;
+    margin-left: 120px;
     display:inline;
     position: static;
 }
