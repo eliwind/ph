@@ -1,7 +1,5 @@
 from datetime import date
-from flask import Flask
-from flask import render_template
-from flask import request
+from flask import Flask, render_template, request, redirect, url_for
 
 import redis
 import json
@@ -9,6 +7,10 @@ import json
 from ses_email import sendmail
 
 app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return redirect(url_for('static', filename='calendar.html'))
 
 @app.route('/shifts')
 def shifts():
