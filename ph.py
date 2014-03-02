@@ -5,6 +5,7 @@ import redis
 import json
 
 from ses_email import sendmail
+from smtplib import SMTPRecipientsRefused
 
 import util
 
@@ -44,7 +45,10 @@ def cancel():
     worker = json.loads(r.hget(shiftname, 'worker'))
     r.hdel (shiftname, 'worker')
     r.lrem (worker['family'], 0, shiftname)
-    sendCancelEmail (worker['email'], worker['name'], shifts[0]['date'], shifts[0]['shift'])
+    try:
+        sendCancelEmail (worker['email'], worker['name'], shifts[0]['date'], shifts[0]['shift'])
+    except SMTPRecipientsRefused:
+        pass # oh well
     return json.dumps('success')
 
 
@@ -74,10 +78,17 @@ def signup():
     r.hset (shiftname, 'worker',
             json.dumps({'name':name, 'email':email, 'family':family}))
     r.lpush (family, shiftname)
-    sendSignupEmail (email, name, shifts[0]['date'], shift)
-    if (oldworker and oldworker['email'] != email):
-        sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift)
-            
+    try:
+        sendSignupEmail (email, name, shifts[0]['date'], shift)
+    except SMTPRecipientsRefused:
+        pass # oh well
+
+    try:
+        if (oldworker and oldworker['email'] != email):
+            sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift)
+    except SMTPRecipientsRefused:
+        pass # oh well
+        
     return json.dumps('success')
 
 
