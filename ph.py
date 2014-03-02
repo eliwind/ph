@@ -6,6 +6,8 @@ import json
 
 from ses_email import sendmail
 
+import util
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -22,7 +24,7 @@ def shifts():
     for slot in slots:
         pipe.hgetall(slot)
 
-    return json.dumps([fixWorker(s) for s in pipe.execute()])
+    return json.dumps([util.fixWorker(s) for s in pipe.execute()])
     
 
 @app.route('/cancel')
@@ -34,7 +36,7 @@ def cancel():
     # TODO: make sure all arguments are provided
 
     # Make sure the shift exists
-    slots=getSlots (r, date, shift)
+    shifts = util.getSlots (r, date, shift)
     if len(shifts) == 0:
         return json.dumps('shift not available')
     
@@ -59,7 +61,7 @@ def signup():
     # TODO: make sure all arguments are provided
 
     # Make sure the shift exists
-    shifts = getSlots (r, date, shift)
+    shifts = util.getSlots (r, date, shift)
     if len(shifts) == 0:
         return json.dumps('shift not available')
 
@@ -89,7 +91,7 @@ def schedule():
 
     
     # For each date, we want to find all the shifts, then look up each of them
-    slots = r.zrangebyscore ('slotsbydate', toScore(startDate), toScore(endDate))
+    slots = r.zrangebyscore ('slotsbydate', util.toScore(startDate), util.toScore(endDate))
     pipe = r.pipeline()
     for slot in slots:
         pipe.hgetall(slot)
@@ -98,68 +100,6 @@ def schedule():
 
 
 ##############################################################
-def getSlots (r, date, shift):
-    '''Gets the slot, if any, for a given date (as YYYYMMDD integer) and shift'''
-    slots=r.zrangebyscore ('slotsbydate', date, date)
-    pipe = r.pipeline()
-    for slot in slots:
-        pipe.hgetall(slot)
-    return [x for x in pipe.execute() if x['shift'] == shift]
-    
-    
-
-def toScore (date):
-    '''Converts a date to an integer to use as a score in a redis sorted set: YYYYMMDD'''
-    return int (date.strftime('%Y%m%d'))
-
-def toCalEvent (slot):
-    '''Turns a slot as stored in redis into the right JSON format for rendering in FullCalendar'''
-    worker = None
-    if ('worker' in slot):
-        worker = json.loads(slot['worker'])
-        title = slot['shift'] + ': ' + worker['name']
-        color='#00b4cc'
-        textColor='black'
-    else:
-        title = slot['shift']
-        color = '#005f6b'
-        textColor='white'
-        
-    return {
-        'title': title,
-        'start': slot['date'] + 'T' + getStartTime(slot['shift']) + 'Z',
-        'end': slot['date'] + 'T' + getEndTime(slot['shift']) + 'Z',
-        'color': color,
-        'textColor': textColor,
-
-        # extra fields to pass through for editing shifts
-        'worker':worker,
-        'shift':slot['shift']
-        }
-
-def getStartTime (shift):
-    '''Gets start times for each type of shift'''
-    return {
-        'AM1':'08:30:00',
-        'AM2':'08:30:00',
-        'PM':'12:30:00',
-        'Snack':'08:30:00'
-        }[shift]
-
-def getEndTime (shift):
-    '''Gets end times for each type of shift'''
-    return {
-        'AM1':'13:00:00',
-        'AM2':'13:00:00',
-        'PM':'14:20:00',
-        'Snack':'09:00:00'
-        }[shift]
-
-def fixWorker (shift):
-    ''' Replaces 'worker' field as json string with an object'''
-    if ('worker' in shift):
-        shift['worker'] = json.loads(shift['worker'])
-    return shift
 
 def sendSignupEmail (email, name, date, shift):
     body = '''\
@@ -197,6 +137,31 @@ Your friends at Agassiz Preschool
 ''' % (shift, date)
 
     sendmail (email, 'Your Parent Help shift has been canceled', body)
+
+def toCalEvent (slot):
+    '''Turns a slot as stored in redis into the right JSON format for rendering in FullCalendar'''
+    worker = None
+    if ('worker' in slot):
+        worker = json.loads(slot['worker'])
+        title = slot['shift'] + ': ' + worker['name']
+        color='#00b4cc'
+        textColor='black'
+    else:
+        title = slot['shift']
+        color = '#005f6b'
+        textColor='white'
+        
+    return {
+        'title': title,
+        'start': slot['date'] + 'T' + util.getStartTime(slot['shift']) + 'Z',
+        'end': slot['date'] + 'T' + util.getEndTime(slot['shift']) + 'Z',
+        'color': color,
+        'textColor': textColor,
+
+        # extra fields to pass through for editing shifts
+        'worker':worker,
+        'shift':slot['shift']
+        }
 
 
 if __name__ == '__main__':
