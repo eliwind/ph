@@ -23,6 +23,11 @@
     display:none;
 }
 
+.popupHeader {
+    font-weight:bold;
+	font-size:larger;
+}
+
 #errMsg {
     color: red;
 }

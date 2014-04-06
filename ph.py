@@ -15,6 +15,18 @@ app = Flask(__name__)
 def index():
     return redirect(url_for('static', filename='calendar.html'))
 
+@app.route('/config', methods=['GET', 'POST'])
+def config():
+    r = redis.StrictRedis()
+
+    if request.method == 'GET':
+        # read the config
+        return json.dumps(r.hgetall('config'))
+
+    # set the config
+    r.hmset ('config', request.form)
+    return json.dumps('success')
+
 @app.route('/shifts')
 def shifts():
     r = redis.StrictRedis()
@@ -45,8 +57,9 @@ def cancel():
     worker = json.loads(r.hget(shiftname, 'worker'))
     r.hdel (shiftname, 'worker')
     r.lrem (worker['family'], 0, shiftname)
+    config = r.hgetall('config')
     try:
-        sendCancelEmail (worker['email'], worker['name'], shifts[0]['date'], shifts[0]['shift'])
+        sendCancelEmail (worker['email'], worker['name'], shifts[0]['date'], shifts[0]['shift'], config)
     except SMTPRecipientsRefused:
         pass # oh well
     return json.dumps('success')
@@ -78,14 +91,15 @@ def signup():
     r.hset (shiftname, 'worker',
             json.dumps({'name':name, 'email':email, 'family':family}))
     r.lpush (family, shiftname)
+    config = r.hgetall('config')
     try:
-        sendSignupEmail (email, name, shifts[0]['date'], shift)
+        sendSignupEmail (email, name, shifts[0]['date'], shift, config)
     except SMTPRecipientsRefused:
         pass # oh well
 
     try:
         if (oldworker and oldworker['email'] != email):
-            sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift)
+            sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift, config)
     except SMTPRecipientsRefused:
         pass # oh well
         
@@ -112,7 +126,7 @@ def schedule():
 
 ##############################################################
 
-def sendSignupEmail (email, name, date, shift):
+def sendSignupEmail (email, name, date, shift, config):
     body = '''\
 Hello!
 
@@ -121,17 +135,17 @@ This e-mail confirms that you've signed up for parent help or snack at Agassiz P
 Shift: %s
 Date: %s
 
-If you have any questions, please e-mail Eli Daniel at eli.daniel@gmail.com or call him at (857) 222-6705.
+If you have any questions, please e-mail %s at %s or call at %s.
 
 Thanks!
 
 Your friends at Agassiz Preschool
-''' % (shift, date)
+''' % (shift, date, config['phcName'], config['phcEmail'], config['phcPhone'])
 
     sendmail (email, 'Your Parent Help or Snack confirmation', body)
     
     
-def sendCancelEmail (email, name, date, shift):
+def sendCancelEmail (email, name, date, shift, config):
     body = '''\
 Hello!
 
@@ -140,12 +154,12 @@ This e-mail confirms that your Agassiz Preschool parent help shift has been canc
 Shift: %s
 Date: %s
 
-If you have any questions, please e-mail Eli Daniel at eli.daniel@gmail.com or call him at (857) 222-6705.
+If you have any questions, please e-mail %s at %s or call at %s.
 
 Thanks!
 
 Your friends at Agassiz Preschool
-''' % (shift, date)
+''' % (shift, date, config['phcName'], config['phcEmail'], config['phcPhone'])
 
     sendmail (email, 'Your Parent Help shift has been canceled', body)
 
