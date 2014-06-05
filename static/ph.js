@@ -136,14 +136,15 @@ $(document).ready(function() {
 	// Add a semester
     $('#saveSemester').click(function() {
         $.ajax({
-            url: '/addsemester',
+            url: '/load_semester',
             dataType: 'json',
             data: {
 				start: $('#semesterStart').val(),
 				end: $('#semesterEnd').val(),
-				holidays: $('#semesterHolidays').val(),
-				halfDays: $('#semesterHalfDays').val()
+				holidays: $('#semesterHolidays').val().split(','),
+				half_days: $('#semesterHalfDays').val().split(',')
             },
+	    traditional: true,
             success: function (result, status, xhr) {
 				$('#calendar').fullCalendar('refetchEvents');
 				closePopup('#newSemester');

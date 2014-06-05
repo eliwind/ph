@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from flask import Flask, render_template, request, redirect, url_for
 
 import redis
@@ -6,10 +6,13 @@ import json
 
 from ses_email import sendmail
 from smtplib import SMTPRecipientsRefused
+from dateutil import rrule
+
 
 import util
 
 app = Flask(__name__)
+r = redis.StrictRedis()
 
 @app.route('/')
 def index():
@@ -17,8 +20,6 @@ def index():
 
 @app.route('/config', methods=['GET', 'POST'])
 def config():
-    r = redis.StrictRedis()
-
     if request.method == 'GET':
         # read the config
         return json.dumps(r.hgetall('config'))
@@ -29,8 +30,6 @@ def config():
 
 @app.route('/shifts')
 def shifts():
-    r = redis.StrictRedis()
-
     family = request.args.get('family')
     slots = r.lrange (family, 0, -1)
     pipe = r.pipeline()
@@ -42,8 +41,6 @@ def shifts():
 
 @app.route('/cancel')
 def cancel():
-    r = redis.StrictRedis()
-
     shift = request.args.get('shift')
     date = request.args.get('date')
     # TODO: make sure all arguments are provided
@@ -67,8 +64,6 @@ def cancel():
 
 @app.route('/signup')
 def signup():
-    r = redis.StrictRedis()
-
     shift = request.args.get('shift')
     date = request.args.get('date')
     name = request.args.get('name')
@@ -108,8 +103,6 @@ def signup():
 
 @app.route('/schedule')
 def schedule():
-    r = redis.StrictRedis()
-
     startDate = date.fromtimestamp(request.args.get('start', type=int))
     endDate = date.fromtimestamp(request.args.get('end', type=int))
     # TODO: make sure all arguments are provided
@@ -123,6 +116,32 @@ def schedule():
 
     return json.dumps([toCalEvent(e) for e in pipe.execute()])
 
+
+@app.route('/load_semester')
+def load_semester():
+    start = datetime.strptime(request.args.get('start'), '%m/%d/%Y')
+    end = datetime.strptime(request.args.get('end'), '%m/%d/%Y')
+    holidays = [datetime.strptime(t.strip(), '%m/%d/%Y') for t in request.args.getlist('holidays')]
+    half_days = [datetime.strptime(t.strip(), '%m/%d/%Y') for t in request.args.getlist('half_days')]
+
+    print 'holidays: [%s]' % ', '.join(map(str, request.values.getlist('holidays')))
+    print 'half days: [%s]' % ', '.join(map(str, request.values.getlist('half_days')))
+
+    for day in rrule.rrule (rrule.DAILY, 
+                            byweekday=(rrule.MO,rrule.TU,rrule.WE,rrule.TH,rrule.FR), 
+                            dtstart=start, until=end):
+        print 'testing day: ' + str(day)
+        if day in holidays:
+            continue
+
+        for shift in ['AM1', 'AM2', 'Snack']:
+            load_shift (day, shift)
+
+        if day in half_days:
+            continue
+
+        load_shift (day, 'PM')
+    return json.dumps('success')
 
 ##############################################################
 
@@ -187,6 +206,14 @@ def toCalEvent (slot):
         'worker':worker,
         'shift':slot['shift']
         }
+
+    
+def load_shift (day, shift):
+    printdate = day.strftime('%Y-%m-%d')
+    numdate = int (day.strftime('%Y%m%d'))
+    r.zadd ('slotsbydate', numdate, printdate + '|' + shift)
+    r.hset (printdate + '|' + shift, 'shift', shift)
+    r.hset (printdate + '|' + shift, 'date', printdate)
 
 
 if __name__ == '__main__':

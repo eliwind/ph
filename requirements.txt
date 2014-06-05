@@ -4,9 +4,13 @@ Jinja2==2.7.1
 MarkupSafe==0.18
 Werkzeug==0.9.4
 argparse==1.2.1
+dateutils==0.6.6
 epc==0.0.5
 itsdangerous==0.23
 jedi==0.7.0
+python-dateutil==2.2
+pytz==2014.4
 redis==2.8.0
 sexpdata==0.0.3
+six==1.6.1
 wsgiref==0.1.2
