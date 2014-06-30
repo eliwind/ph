@@ -1,3 +1,11 @@
+body {
+	font-family: Helvetica,Arial,sans-serif;
+}
+
+#header {
+	font-style: italic;
+	font-size: smaller;
+}
 
 #overlay {
     opacity: 0;

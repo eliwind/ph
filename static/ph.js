@@ -5,7 +5,6 @@ $(document).ready(function() {
     $('#calendar').fullCalendar({
         weekends: false,
         events: '/schedule',
-        contentHeight: 600,
 
         // handle event clicks: pop up edit box
         eventClick: function(calEvent, jsEvent, view) {
@@ -254,7 +253,7 @@ function showShifts (result, status, xhr) {
         // add shifts to the table
         result.sort (shiftComparator).forEach (function (shift) {
                       shiftDate = new Date(shift['date']);
-                      $('#shiftData').append('<tr><td>' + shiftDate.getUTCMonth() + '/' + shiftDate.getUTCDate() + '/' + shiftDate.getUTCFullYear() +
+                      $('#shiftData').append('<tr><td>' + (shiftDate.getUTCMonth() + 1) + '/' + shiftDate.getUTCDate() + '/' + shiftDate.getUTCFullYear() +
     							  '</td><td>' + shift['worker']['name'] +
     						        '</td><td>' + shift['shift'] + '</td></tr>');                            
                   });
