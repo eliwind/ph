@@ -4,29 +4,14 @@ import json
 from ses_email import sendmail
 
 import util
+import email_contents
+
 from datetime import date, timedelta
 
 def sendReminderEmail (email, name, date, shift, config):
-    body = '''\
-Hello!
-
-This e-mail is your reminder that you are signed up for parent help or snack at Agassiz Preschool:
-
-Shift: %s
-Date: %s
-
-Please note that you are responsible for filling your parent help or snack slot.  If you are no longer available, please find a replacement who can take your slot.
-
-If you have any questions, please e-mail %s at %s or call at %s.
-
-Thanks, and enjoy Parent Help!
-
-Your friends at Agassiz Preschool
-''' % (shift, date, config['phcName'], config['phcEmail'], config['phcPhone'])
-
-    sendmail (email, 'Agassiz Parent Help or Snack reminder', body)
-    
-            
+    body = email_contents.reminder_body(name, date, shift, config)
+    subject = email_contents.reminder_subject(name, date, shift, config)
+    sendmail (email, subject, body)
 
 if __name__ == '__main__':
     # This runs weekends, early.  So check everything between now and one week from now

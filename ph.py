@@ -10,6 +10,7 @@ from dateutil import rrule
 
 
 import util
+import email_contents
 
 app = Flask(__name__)
 r = redis.StrictRedis()
@@ -121,8 +122,8 @@ def schedule():
 def load_semester():
     start = datetime.strptime(request.args.get('start'), '%m/%d/%Y')
     end = datetime.strptime(request.args.get('end'), '%m/%d/%Y')
-    holidays = [datetime.strptime(t.strip(), '%m/%d/%Y') for t in request.args.getlist('holidays')]
-    half_days = [datetime.strptime(t.strip(), '%m/%d/%Y') for t in request.args.getlist('half_days')]
+    holidays = [datetime.strptime(t.strip(), '%m/%d/%Y') for t in request.args.getlist('holidays') if t]
+    half_days = [datetime.strptime(t.strip(), '%m/%d/%Y') for t in request.args.getlist('half_days') if t]
 
     print 'holidays: [%s]' % ', '.join(map(str, request.values.getlist('holidays')))
     print 'half days: [%s]' % ', '.join(map(str, request.values.getlist('half_days')))
@@ -146,41 +147,14 @@ def load_semester():
 ##############################################################
 
 def sendSignupEmail (email, name, date, shift, config):
-    body = '''\
-Hello!
-
-This e-mail confirms that you've signed up for parent help or snack at Agassiz Preschool:
-
-Shift: %s
-Date: %s
-
-If you have any questions, please e-mail %s at %s or call at %s.
-
-Thanks!
-
-Your friends at Agassiz Preschool
-''' % (shift, date, config['phcName'], config['phcEmail'], config['phcPhone'])
-
-    sendmail (email, 'Your Parent Help or Snack confirmation', body)
-    
+    body = email_contents.signup_body(name, date, shift, config)
+    subject = email_contents.signup_subject(name, date, shift, config)
+    sendmail (email, subject, body)
     
 def sendCancelEmail (email, name, date, shift, config):
-    body = '''\
-Hello!
-
-This e-mail confirms that your Agassiz Preschool parent help shift has been canceled:
-
-Shift: %s
-Date: %s
-
-If you have any questions, please e-mail %s at %s or call at %s.
-
-Thanks!
-
-Your friends at Agassiz Preschool
-''' % (shift, date, config['phcName'], config['phcEmail'], config['phcPhone'])
-
-    sendmail (email, 'Your Parent Help shift has been canceled', body)
+    body = email_contents.cancel_body(name, date, shift, config)
+    subject = email_contents.cancel_subject(name, date, shift, config)
+    sendmail (email, subject, body)
 
 def toCalEvent (slot):
     '''Turns a slot as stored in redis into the right JSON format for rendering in FullCalendar'''
