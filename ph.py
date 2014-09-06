@@ -80,12 +80,15 @@ def signup():
 
     shiftname = shifts[0]['date'] + '|' + shifts[0]['shift']
     oldworker = r.hget(shiftname, 'worker')
+    worker = {'name':name, 'email':email, 'family':family}
     if (oldworker):
         oldworker = json.loads(oldworker)
+        if oldworker == worker:
+            # replacing a worker with the same one; nothing to do
+            return json.dumps('success')
         r.lrem (oldworker['family'], 0, shiftname)
-        
-    r.hset (shiftname, 'worker',
-            json.dumps({'name':name, 'email':email, 'family':family}))
+
+    r.hset (shiftname, 'worker', json.dumps(worker))
     r.lpush (family, shiftname)
     config = r.hgetall('config')
     try:
@@ -94,8 +97,7 @@ def signup():
         pass # oh well
 
     try:
-        if (oldworker and oldworker['email'] != email):
-            sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift, config)
+        sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift, config)
     except SMTPRecipientsRefused:
         pass # oh well
         
