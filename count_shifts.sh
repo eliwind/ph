@@ -2,8 +2,8 @@
 
 if [ $# -ne 2 ]
 then
-    echo 'Usage: count_days.sh <start> <end>'
-	echo 'Both <start> and <end> are integers in YYYYMMDD format, e.g. 20141901'
+    echo "Usage: $0 <start> <end>"
+	echo "Both <start> and <end> are integers in YYYYMMDD format, e.g. 20141901"
 	exit
 fi
 
