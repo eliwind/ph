@@ -97,7 +97,8 @@ def signup():
         pass # oh well
 
     try:
-        sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift, config)
+        if oldworker:
+            sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift, config)
     except SMTPRecipientsRefused:
         pass # oh well
         
