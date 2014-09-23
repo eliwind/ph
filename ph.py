@@ -107,7 +107,6 @@ def signup():
         pass # oh well
 
     # don't send any emails for just changing details of a shift under the same email address
-        
     return json.dumps('success')
 
 
