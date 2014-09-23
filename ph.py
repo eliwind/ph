@@ -91,16 +91,22 @@ def signup():
     r.hset (shiftname, 'worker', json.dumps(worker))
     r.lpush (family, shiftname)
     config = r.hgetall('config')
-    try:
-        sendSignupEmail (email, name, shifts[0]['date'], shift, config)
-    except SMTPRecipientsRefused:
-        pass # oh well
 
+    # if this is taking over a shift formerly assigned to someone else, send the old person a cancellation email 
     try:
-        if oldworker:
+        if oldworker and oldworker['email'] != email:
             sendCancelEmail (oldworker['email'], oldworker['name'], shifts[0]['date'], shift, config)
     except SMTPRecipientsRefused:
         pass # oh well
+
+    # if this a new shift, or taking over a shift from someone else, send the new person a signup email
+    try:
+        if not oldworker or oldworker['email'] != email:
+            sendSignupEmail (email, name, shifts[0]['date'], shift, config)
+    except SMTPRecipientsRefused:
+        pass # oh well
+
+    # don't send any emails for just changing details of a shift under the same email address
         
     return json.dumps('success')
 
@@ -164,7 +170,7 @@ def toCalEvent (slot):
     worker = None
     if ('worker' in slot):
         worker = json.loads(slot['worker'])
-        title = slot['shift'] + ': ' + worker['name']
+        title = slot['shift'] + ': ' + worker['family']
         color='#00b4cc'
         textColor='black'
     else:
