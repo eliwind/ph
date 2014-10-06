@@ -62,5 +62,27 @@ Your friends at Agassiz Preschool
 def reminder_subject (name, date, shift, config):
     return 'Parent Help reminder: %s on %s' % (shift, pretty_date(date))
 
+def announce_body (date, am1, am2, pm, snack, config):
+    am1Txt = am1['family'] + ' [' + am1['name'] + ']' if am1 else 'None'
+    am2Txt = am2['family'] + ' [' + am2['name'] + ']' if am2 else 'None'
+    pmTxt = pm['family'] + ' [' + pm['name'] + ']' if pm else 'None'
+    snackTxt = snack['family'] + ' [' + snack['name'] + ']' if snack else 'None'
+    return '''
+Agassiz Preschool Parent Helpers for %s :
+
+AM1: %s
+AM2: %s
+PM: %s
+Snack: %s
+
+If you have any questions, please e-mail %s at %s or call at %s.
+''' % (pretty_print_date(date), am1Txt, am2Txt, pmTxt, snackTxt, config['phcName'], config['phcEmail'], config['phcPhone'])
+
+def announce_subject (date, am1, am2, pm, snack, config):
+    return '[Agassiz PH] Today\'s Parent Helpers' 
+
 def pretty_date (date):
-    return datetime.strptime(date, '%Y-%m-%d').strftime('%A %B %d, %Y')
+    return pretty_print_date(datetime.strptime(date, '%Y-%m-%d'))
+
+def pretty_print_date (date):
+    return date.strftime('%A %B %d, %Y')
