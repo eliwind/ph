@@ -5,6 +5,12 @@
 <script type="text/javascript" src="jquery-1.11.0.js" ></script>
 <script type="text/javascript" src="fullcalendar.js"> </script>
 <script type="text/javascript" src="ph.js"> </script>
+<script type="text/javascript" src="https://addthisevent.com/libs/1.5.8/ate.min.js"></script>
+<script type="text/javascript">
+  addthisevent.settings({
+      css       : false,
+  });
+</script>  
 </head>
 
 <body>
@@ -22,20 +28,33 @@
 <!-- Popup: editing shifts -->
 <div id="popup" class="popup">
   <span id="shiftTitle" class="popupHeader"></span><p>
-  <form>
+  <form style="margin-bottom:0">
     <label><span>Shift </span><input type="text" readOnly="true" id="shift"/></label>
     <label><span>Date </span><input type="text" readOnly="true" id="shiftDate"/></span></label>
     <p>
     <label><span>Family Name </span><input type="text" id="shiftFamily" autofocus="true"/></label>
     <label><span>Who's working? </span><input type="text" id="shiftWorker" /></label>
     <label><span>Email </span><input type="text" id="shiftEmail" /></label>
-    <p>
-    <span id="errMsg"></span>							
-    <div style="float:right;">
+    <p/>
+	<p>
+    <span id="errMsg"></span>
+	</p>
+
+	<div style="margin-top: 2em">
+	  <a href="" title="Add to Calendar" class="addthisevent">
+		<span class="_start" id="calStart"></span>
+		<span class="_end" id="calEnd"></span>
+		<span class="_zonecode">15</span>
+		<span class="_summary" id="calSummary"></span>
+		<span class="_description" id="calDesc"></span>
+	  </a>
+	  
+      <div style="float:right;">
         <input type="button" id="cancelShift" value="Cancel shift"/>
         <input type="button" id="saveShift" value="Save shift"/>
         <input type="button" id="closePopup" value="Discard changes"/>
-    </div>
+      </div>
+	</div>
   </form>
 </div>
 

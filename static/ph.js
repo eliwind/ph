@@ -24,8 +24,27 @@ $(document).ready(function() {
                 $('#cancelShift').hide();
 
             }
-            $('#shiftDate').val(calEvent.start.toLocaleDateString());
-            $('#shift').val(calEvent.shift);
+			dateStr = calEvent.start.toLocaleDateString();
+			shift = calEvent.shift;
+			if (shift.indexOf('AM') == 0) {
+				startTime = '8:30:00 AM';
+				endTime = '1:00 PM';
+			} else if (shift == 'PM') {
+				startTime = '12:30 PM';
+				endTime = '2:30 PM';
+			} else if (shift == 'Snack') {
+				startTime = '8:30:00 AM';
+				endTime = '9:00:00 AM';
+			}
+
+			$('#calStart').text(dateStr + ' ' + startTime);
+			$('#calEnd').text(dateStr + ' ' + endTime);
+			$('#calSummary').text('Parent Help');
+			$('#calDesc').text('Parent Help at Agassiz Preschool')
+			addthisevent.refresh();
+			
+            $('#shiftDate').val(dateStr);
+            $('#shift').val(shift);
             $('#errMsg').hide();
 
             displayPopup ('#popup')
