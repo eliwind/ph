@@ -9,6 +9,7 @@ To set up:
 1. Install crontab to run scheduled jobs
 
 To migrate an existing redis database:
+
 1. on old system, send SAVE command
 1. copy dump.rdb to new system
 1. make sure appendonlyfile is off, and start redis
