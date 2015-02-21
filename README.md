@@ -5,6 +5,7 @@ To set up:
 1. Install redis (apt-get install redis-server)
 1. Install pip (apt-get install python-pip)
 1. Clone this repo into /ph
+1. Activate ph virtualenv
 1. Run server: python server.py
 1. Install crontab to run scheduled jobs
 
