@@ -1,4 +1,5 @@
 import smtplib
+import ConfigParser
 from email.mime.text import MIMEText
 
 def sendmail (toaddr, subject, body):
@@ -7,12 +8,12 @@ def sendmail (toaddr, subject, body):
     msg['From'] = 'parenthelp@agassizpreschool.org'
     msg['To'] = toaddr
     
-    # Send the message via our own SMTP server, but don't include the
-    # envelope header.
+    cfg = ConfigParser.ConfigParser()
+    cfg.read('ses.cfg')
+    
     s = smtplib.SMTP_SSL('email-smtp.us-east-1.amazonaws.com')
-    s.login ('AKIAJCX6NGII4NPM2ONA', 'Aho1fIvhLaL368fjxCGfnlD4pIkKLwsyfscxzBRU9FDk' )
+    s.login (cfg.get('ses', 'smtp_username', 'BOGUS'),
+             cfg.get('ses', 'smtp_password', 'BOGUS'))
     s.sendmail('parenthelp@agassizpreschool.org', toaddr, msg.as_string())
     s.quit()
-
-
     
