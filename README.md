@@ -7,13 +7,13 @@ To set up:
 1. Clone this repo into /ph
 1. Activate ph virtualenv
 1. Run server: python server.py
+1. Install crontab to run scheduled jobs
 1. Set up SES credentials for email: create a file called ses.cfg in the working directory with the following contents:
 ```
 [ses]
 smtp_username: <AWS SMTP username for SES>
 smtp_password: <AWS SMTP password for SES>
 ```
-1. Install crontab to run scheduled jobs
 
 
 To migrate an existing redis database:
