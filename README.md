@@ -6,7 +6,8 @@ To set up:
 1. Install pip (apt-get install python-pip)
 1. Clone this repo into /ph
 1. Activate ph virtualenv
-1. Run server: python server.py
+1. Install upstart job: sudo cp ph.conf /etc/init
+1. Run server: sudo service ph start
 1. Install crontab to run scheduled jobs
 1. Set up SES credentials for email: create a file called ses.cfg in the working directory with the following contents:
 ```
